@@ -31,9 +31,9 @@ final class BitmapOperate {
         if (needChange) {
             aimBitmap = Bitmap.createScaledBitmap(bitmap, width,
                     height, false);
-            if (aimBitmap != bitmap) {
-                bitmap.recycle();
-            }
+            bitmap = null;
+        } else {
+            aimBitmap = bitmap;
         }
         return aimBitmap;
     }
@@ -55,9 +55,7 @@ final class BitmapOperate {
             Canvas canvas = new Canvas(aimBitmap);
             paint.setColor(Color.BLACK);
             canvas.drawBitmap(bitmap, 0, 0, paint);
-            if (aimBitmap != bitmap) {
-                bitmap.recycle();
-            }
+            bitmap = null;
         }
         return aimBitmap;
     }

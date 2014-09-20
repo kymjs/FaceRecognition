@@ -25,13 +25,14 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.PointF;
+import android.media.FaceDetector;
 import android.util.Log;
 
 /**
  * 从Bitmap获取脸部位置的工具类.<br>
  * 它支持多个人脸的识别并剪裁全部识别出来的脸（默认最多8个，效率问题）支持任何格式的图片
  */
-public class FaceCropper {
+public final class FaceCropper {
 
     public enum SizeMode {
         FACE_MARGIN, EYE_MARGIN
@@ -47,12 +48,12 @@ public class FaceCropper {
     private int mFaceMinSize = MIN_FACE_SIZE;
     private int mMaxFaces = MAX_FACES;
     private int mFaceMarginPx = FACE_MARGIN_PX;
-    private float mEyeDistanceFactorMargin = EYE_MARGIN_PX;
+    private float mEyeMarginPx = EYE_MARGIN_PX;
     private SizeMode mSizeMode = SizeMode.EYE_MARGIN;
-    private boolean mDebug;
 
-    private Paint mDebugPainter;
-    private Paint mDebugAreaPainter;
+    private boolean mDebug = true;
+    private Paint mDebugPainter; // 用作调试阶段显示人脸识别的圈
+    private Paint mDebugAreaPainter; // 用作调试阶段显示人脸识别的圈
 
     public FaceCropper() {
         initPaints();
@@ -79,8 +80,106 @@ public class FaceCropper {
     }
 
     /********************* core method **********************************/
-    protected FaceResult cropFace(Bitmap original, boolean debug) {
-        Bitmap formatBitmap = BitmapOperate.formatBitmap(original);
+
+    /**
+     * 获取debug模式下的图片
+     * 
+     * @param ctx
+     * @param res
+     * @return
+     */
+    public Bitmap getDebugImage(Context ctx, int res) {
+        // 以565格式通过resId创建bitmap
+        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+        bitmapOptions.inPreferredConfig = Bitmap.Config.RGB_565;
+        return getDebugImage(BitmapFactory.decodeResource(
+                ctx.getResources(), res, bitmapOptions));
+    }
+
+    /**
+     * 获取debug模式下的图片
+     * 
+     * @param bitmap
+     * @return
+     */
+    public Bitmap getDebugImage(Bitmap bitmap) {
+        FaceResult result = cropFace(bitmap, true);
+        Canvas canvas = new Canvas(result.getBitmap());
+
+        canvas.drawBitmap(result.getBitmap(), new Matrix(), null);
+        canvas.drawRect(result.getInit().x, result.getInit().y,
+                result.getEnd().x, result.getEnd().y,
+                mDebugAreaPainter);
+
+        return result.getBitmap();
+    }
+
+    /**
+     * 剪裁指定图片中的脸
+     * 
+     * @param ctx
+     * @param res
+     * @return
+     */
+    public Bitmap cropFace(Context ctx, int res) {
+        return getCroppedImage(ctx, res);
+    }
+
+    /**
+     * 剪裁指定图片中的脸
+     * 
+     * @param bitmap
+     * @return
+     */
+    public Bitmap cropFace(Bitmap bitmap) {
+        return getCroppedImage(bitmap);
+    }
+
+    /**
+     * 获取裁剪以后的人脸
+     * 
+     * @param ctx
+     * @param res
+     * @return
+     */
+    private Bitmap getCroppedImage(Context ctx, int res) {
+        // 以565格式通过resId创建bitmap
+        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+        bitmapOptions.inPreferredConfig = Bitmap.Config.RGB_565;
+        return getCroppedImage(BitmapFactory.decodeResource(
+                ctx.getResources(), res, bitmapOptions));
+    }
+
+    /**
+     * 获取裁剪以后的人脸
+     * 
+     * @param bitmap
+     * @return
+     */
+    private Bitmap getCroppedImage(Bitmap bitmap) {
+        FaceResult result = cropFace(bitmap, mDebug);
+        Bitmap croppedBitmap = Bitmap.createBitmap(
+                result.getBitmap(), result.getInit().x,
+                result.getInit().y,
+                result.getEnd().x - result.getInit().x,
+                result.getEnd().y - result.getInit().y);
+        if (result.getBitmap() != croppedBitmap) {
+            result.getBitmap().recycle();
+        }
+        return croppedBitmap;
+    }
+
+    /**
+     * 剪裁脸部的核心方法
+     * 
+     * @param bitmap
+     *            待识别的图片
+     * @param debug
+     *            是否开启调试模式
+     * @return
+     */
+    private FaceResult cropFace(Bitmap bitmap, boolean debug) {
+        Bitmap formatBitmap = BitmapOperate.formatBitmap(bitmap);
         formatBitmap = BitmapOperate.formatBitmapTo565(formatBitmap);
         Bitmap aimBitmap = formatBitmap.copy(Bitmap.Config.RGB_565,
                 true);
@@ -96,8 +195,8 @@ public class FaceCropper {
         // Bitmap必须是565格式
         int faceCount = faceDetector.findFaces(aimBitmap, faces);
 
-        if (BuildConfig.DEBUG) {
-            Log.d("debug", faceCount + "张脸被找到");
+        if (debug) {
+            Log.d("kymjs", faceCount + "张脸被找到");
         }
 
         if (faceCount == 0) {
@@ -120,18 +219,14 @@ public class FaceCropper {
             // 通常采用眼睛间距乘以三作为脸的外接圆直径
             int faceSize = (int) (face.eyesDistance() * 3);
             if (SizeMode.FACE_MARGIN.equals(mSizeMode)) {
-                faceSize += mFaceMarginPx * 2; // *2 for top and down/right and
-                                               // left effect
+                faceSize += mFaceMarginPx * 2;
             } else if (SizeMode.EYE_MARGIN.equals(mSizeMode)) {
-                faceSize += face.eyesDistance()
-                        * mEyeDistanceFactorMargin;
+                faceSize += face.eyesDistance() * mEyeMarginPx;
             }
-
             faceSize = Math.max(faceSize, mFaceMinSize);
-
             face.getMidPoint(centerFace);
 
-            if (debug) {
+            if (debug) { // 显示调试人脸识别圈
                 canvas.drawPoint(centerFace.x, centerFace.y,
                         mDebugPainter);
                 canvas.drawCircle(centerFace.x, centerFace.y,
@@ -163,64 +258,9 @@ public class FaceCropper {
         if (sizeY + initY > aimBitmap.getHeight()) {
             sizeY = aimBitmap.getHeight() - initY;
         }
-
         Point init = new Point(initX, initY);
         Point end = new Point(initX + sizeX, initY + sizeY);
-
         return new FaceResult(aimBitmap, init, end);
-    }
-
-    public Bitmap cropFace(Context ctx, int resDrawable) {
-        return getCroppedImage(ctx, resDrawable);
-    }
-
-    public Bitmap cropFace(Bitmap bitmap) {
-        return getCroppedImage(bitmap);
-    }
-
-    public Bitmap getFullDebugImage(Context ctx, int resDrawable) {
-        // Set internal configuration to RGB_565
-        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
-        bitmapOptions.inPreferredConfig = Bitmap.Config.RGB_565;
-
-        return getFullDebugImage(BitmapFactory.decodeResource(
-                ctx.getResources(), resDrawable, bitmapOptions));
-    }
-
-    public Bitmap getFullDebugImage(Bitmap bitmap) {
-        FaceResult result = cropFace(bitmap, true);
-        Canvas canvas = new Canvas(result.getBitmap());
-
-        canvas.drawBitmap(result.getBitmap(), new Matrix(), null);
-        canvas.drawRect(result.getInit().x, result.getInit().y,
-                result.getEnd().x, result.getEnd().y,
-                mDebugAreaPainter);
-
-        return result.getBitmap();
-    }
-
-    public Bitmap getCroppedImage(Context ctx, int resDrawable) {
-        // Set internal configuration to RGB_565
-        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
-        bitmapOptions.inPreferredConfig = Bitmap.Config.RGB_565;
-
-        return getCroppedImage(BitmapFactory.decodeResource(
-                ctx.getResources(), resDrawable, bitmapOptions));
-    }
-
-    public Bitmap getCroppedImage(Bitmap bitmap) {
-        FaceResult result = cropFace(bitmap, mDebug);
-        Bitmap croppedBitmap = Bitmap.createBitmap(
-                result.getBitmap(), result.getInit().x,
-                result.getInit().y,
-                result.getEnd().x - result.getInit().x,
-                result.getEnd().y - result.getInit().y);
-
-        if (result.getBitmap() != croppedBitmap) {
-            result.getBitmap().recycle();
-        }
-
-        return croppedBitmap;
     }
 
     /********************** config method *******************************/
@@ -255,12 +295,12 @@ public class FaceCropper {
     }
 
     public float getEyeDistanceFactorMargin() {
-        return mEyeDistanceFactorMargin;
+        return mEyeMarginPx;
     }
 
     public void setEyeDistanceFactorMargin(
             float eyeDistanceFactorMargin) {
-        mEyeDistanceFactorMargin = eyeDistanceFactorMargin;
+        mEyeMarginPx = eyeDistanceFactorMargin;
         mSizeMode = SizeMode.EYE_MARGIN;
     }
 
