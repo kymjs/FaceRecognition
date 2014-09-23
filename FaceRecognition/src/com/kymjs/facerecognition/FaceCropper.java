@@ -312,7 +312,7 @@ public final class FaceCropper {
         mDebug = debug;
     }
 
-    protected class FaceResult {
+    private class FaceResult {
         Bitmap mBitmap;
         Point mInit;
         Point mEnd;
