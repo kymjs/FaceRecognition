@@ -6,7 +6,7 @@
 本项目就是用于解决此种问题而创建的。
 
 #使用方法
-更多详细使用方法请查看[开源实验室](http://www.kymjs.com)中的讲解
+更多详细使用方法请查看[开源实验室](http://www.kymjs.com)中智能相片裁剪的讲解
 
 ```java
 //最简单的使用，你只需要记住一个方法就够了
@@ -28,3 +28,4 @@ public void initWidget() {
 ```
 
 [!image](https://github.com/kymjs/FaceRecognition/blob/master/image.png)
+[![image](https://github.com/kymjs/FaceRecognition/blob/master/image.png)](http://www.kymjs.com)
