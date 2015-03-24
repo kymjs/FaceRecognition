@@ -20,6 +20,12 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 
+/**
+ * 格式化图片的工具类
+ * 
+ * @author kymjs (http://www.kymjs.com)
+ * 
+ */
 final class BitmapOperate {
     /**
      * 格式化图片宽高，使之可以被识别
@@ -44,8 +50,7 @@ final class BitmapOperate {
         }
         // 如果发生了改变，则做形变
         if (needChange) {
-            aimBitmap = Bitmap.createScaledBitmap(bitmap, width,
-                    height, false);
+            aimBitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
             bitmap = null;
         } else {
             aimBitmap = bitmap;

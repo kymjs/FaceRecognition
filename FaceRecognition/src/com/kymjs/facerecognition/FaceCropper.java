@@ -30,6 +30,8 @@ import android.util.Log;
 /**
  * 从Bitmap获取脸部位置的工具类.<br>
  * 它支持多个人脸的识别并剪裁全部识别出来的脸（默认最多8个，效率问题）支持任何格式的图片
+ * 
+ * @author kymjs (http://www.kymjs.com)
  */
 public final class FaceCropper {
 
@@ -91,8 +93,8 @@ public final class FaceCropper {
         // 以565格式通过resId创建bitmap
         BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
         bitmapOptions.inPreferredConfig = Bitmap.Config.RGB_565;
-        return getDebugImage(BitmapFactory.decodeResource(
-                ctx.getResources(), res, bitmapOptions));
+        return getDebugImage(BitmapFactory.decodeResource(ctx.getResources(),
+                res, bitmapOptions));
     }
 
     /**
@@ -107,8 +109,7 @@ public final class FaceCropper {
 
         canvas.drawBitmap(result.getBitmap(), new Matrix(), null);
         canvas.drawRect(result.getInit().x, result.getInit().y,
-                result.getEnd().x, result.getEnd().y,
-                mDebugAreaPainter);
+                result.getEnd().x, result.getEnd().y, mDebugAreaPainter);
 
         return result.getBitmap();
     }
@@ -145,8 +146,8 @@ public final class FaceCropper {
         // 以565格式通过resId创建bitmap
         BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
         bitmapOptions.inPreferredConfig = Bitmap.Config.RGB_565;
-        return getCroppedImage(BitmapFactory.decodeResource(
-                ctx.getResources(), res, bitmapOptions));
+        return getCroppedImage(BitmapFactory.decodeResource(ctx.getResources(),
+                res, bitmapOptions));
     }
 
     /**
@@ -157,10 +158,9 @@ public final class FaceCropper {
      */
     private Bitmap getCroppedImage(Bitmap bitmap) {
         FaceResult result = cropFace(bitmap, mDebug);
-        Bitmap croppedBitmap = Bitmap.createBitmap(
-                result.getBitmap(), result.getInit().x,
-                result.getInit().y,
-                result.getEnd().x - result.getInit().x,
+        Bitmap croppedBitmap = Bitmap.createBitmap(result.getBitmap(),
+                result.getInit().x, result.getInit().y, result.getEnd().x
+                        - result.getInit().x,
                 result.getEnd().y - result.getInit().y);
         if (result.getBitmap() != croppedBitmap) {
             result.getBitmap().recycle();
@@ -180,15 +180,13 @@ public final class FaceCropper {
     private FaceResult cropFace(Bitmap bitmap, boolean debug) {
         Bitmap formatBitmap = BitmapOperate.formatBitmap(bitmap);
         formatBitmap = BitmapOperate.formatBitmapTo565(formatBitmap);
-        Bitmap aimBitmap = formatBitmap.copy(Bitmap.Config.RGB_565,
-                true);
+        Bitmap aimBitmap = formatBitmap.copy(Bitmap.Config.RGB_565, true);
         if (formatBitmap != aimBitmap) {
             formatBitmap.recycle();
         }
         // 创建一个人脸识别器
-        FaceDetector faceDetector = new FaceDetector(
-                aimBitmap.getWidth(), aimBitmap.getHeight(),
-                mMaxFaces);
+        FaceDetector faceDetector = new FaceDetector(aimBitmap.getWidth(),
+                aimBitmap.getHeight(), mMaxFaces);
         // 人脸数组
         FaceDetector.Face[] faces = new FaceDetector.Face[mMaxFaces];
         // Bitmap必须是565格式
@@ -226,8 +224,7 @@ public final class FaceCropper {
             face.getMidPoint(centerFace);
 
             if (debug) { // 显示调试人脸识别圈
-                canvas.drawPoint(centerFace.x, centerFace.y,
-                        mDebugPainter);
+                canvas.drawPoint(centerFace.x, centerFace.y, mDebugPainter);
                 canvas.drawCircle(centerFace.x, centerFace.y,
                         face.eyesDistance() * 1.5f, mDebugPainter);
             }
@@ -297,8 +294,7 @@ public final class FaceCropper {
         return mEyeMarginPx;
     }
 
-    public void setEyeDistanceFactorMargin(
-            float eyeDistanceFactorMargin) {
+    public void setEyeDistanceFactorMargin(float eyeDistanceFactorMargin) {
         mEyeMarginPx = eyeDistanceFactorMargin;
         mSizeMode = SizeMode.EYE_MARGIN;
     }
