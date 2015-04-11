@@ -1,3 +1,4 @@
+[![OSL](http://www.kymjs.com/image/logo_s.png)](http://www.kymjs.com/)
 脸部剪裁
 ===============
 #简介
